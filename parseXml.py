@@ -1,6 +1,9 @@
 from collections import defaultdict
+import argparse
 import re
 
+from pylatex import Document, Section, Subsection, Command
+from pylatex.utils import italic, NoEscape
 import xml.etree.ElementTree as ET
 
 def check_chords(line):
@@ -13,8 +16,8 @@ def check_chords(line):
         return False
     else:
         return True
-def main():
-    tree = ET.parse('Songbook.xml')
+def parse_songs(filename):
+    tree = ET.parse(filename)
 
     root = tree.getroot()
 
@@ -22,6 +25,7 @@ def main():
     pages = pages[4:]
 
     songs = defaultdict(list)
+    numbers = {}
 
     for page in pages:
         currentSong = "contents"
@@ -30,18 +34,37 @@ def main():
         for text in page.findall('text'):
             #Then song title
             if text.find('b') is not None:
+
                 currentSong = text.find('b').text
+                reg = re.compile(r"([0-9]+)\.\s+(.+)$")
+                matches = reg.search(currentSong)
+                if matches != None:
+                    numbers[int(matches.group(1))] = currentSong
                 verseCount = 0
                 emptyLine = True
             #Then
             else:
                 if text.text != None and check_chords(text.text):
                     songs[currentSong].append(text.text)
-    for song in songs:
-        print song
-        for verse in songs[song]:
-            print verse
-        print "\n\n"
+    return songs, numbers
+
+def main():
+    parser = argparse.ArgumentParser(description = "Script to parse the songbook xml and generate song sheets")
+    parser.add_argument('song_names', nargs='*')
+    args = parser.parse_args()
+
+
+    songs, numbers = parse_songs('Songbook.xml')
+
+    doc = Document('basic')
+    for song_num in args.song_names:
+        song_name = numbers[int(song_num)]
+        with doc.create(Section(song_name)):
+            for verse in songs[song_name]:
+                doc.append(verse + "\n")
+
+    doc.generate_pdf("songs")
+    doc.generate_tex()
 
 if __name__ == '__main__':
     main()
