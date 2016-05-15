@@ -1,6 +1,6 @@
 from collections import defaultdict
 import re
-
+import pdb
 import xml.etree.ElementTree as ET
 
 def check_chords(line):
