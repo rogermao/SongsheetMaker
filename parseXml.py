@@ -17,6 +17,13 @@ template_end = """
 \\end{document}
 """
 
+#TODO: italicized verses not being recognized
+#TODO: tab before chorus lines that overflow
+#TODO: option to change font size. Or automatically choose max font size for best fit within range of font sizes
+#TODO: Specify song by name. Song searcher. Present options. Choose option
+#TODO: Multiple Songs
+#TODO: Specify margin sizes.
+
 def check_chords(line):
     if len(line) < 1:
         return False
@@ -27,6 +34,7 @@ def check_chords(line):
         return False
     else:
         return True
+
 def parse_songs(filename):
     tree = ET.parse(filename)
 
@@ -41,10 +49,12 @@ def parse_songs(filename):
         currentSong = "contents"
         verseCount = 0
         emptyLine = False
+        indent = 0
         for text in page.findall('text'):
             #Then song title
             if text.find('b') is not None:
                 currentSong = text.find('b').text
+                indent = text.get('left') 
                 reg = re.compile(r"([0-9]+)\.\s+(.+)$")
                 matches = reg.search(currentSong)
                 if matches != None:
@@ -54,7 +64,10 @@ def parse_songs(filename):
             #Then
             else:
                 if text.text != None and check_chords(text.text):
-                    songs[currentSong].append(text.text)
+                    if text.get('left') > indent:
+                        songs[currentSong].append('\\quad '+text.text)
+                    else:
+                        songs[currentSong].append(text.text)
     return songs, numbers
 
 def main():
@@ -71,9 +84,11 @@ def main():
         for i in xrange(4):
             for song_num in args.song_names:
                 song_name = numbers[int(song_num)]
-                f.write('\\textbf{%s} & \\textbf{%s} \\\\ \n' % (song_name, song_name))
+                song_name_str = song_name.encode('utf-8')
+                f.write('\\textbf{%s} & \\textbf{%s} \\\\ \n' % (song_name_str, song_name_str))
                 for verse in songs[song_name]:
-                    f.write('%s & %s \\\\\n' % (verse,verse))
+                    verseStr = verse.encode('utf-8')
+                    f.write('%s & %s \\\\\n' % (verseStr,verseStr))
                 f.write('\\vspace{0.01cm} & \\vspace{0.01cm} \\\\\n')
             f.write('\\vspace{0.01cm} & \\vspace{0.01cm} \\\\\n')
         f.write('\\end{tabular}\\end{flushleft}')
